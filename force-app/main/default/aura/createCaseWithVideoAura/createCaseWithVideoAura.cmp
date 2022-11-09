@@ -1,0 +1,13 @@
+<!--
+  @description       : 
+  @author            : ravi0389@gmail.com
+  @group             : 
+  @last modified on  : 11-09-2022
+  @last modified by  : ChangeMeIn@UserSettingsUnder.SFDoc
+-->
+<aura:component implements="lightning:utilityItem">
+	  <lightning:utilityBarAPI aura:id="utilitybar" />
+    	
+     <c:createCaseWithVideo onStartRecording = "{!c.startRecording}" onEndRecording = "{!c.endRecording}"
+                       onMinimise = "{!c.handleMinimise}" onMaximise = "{!c.handleMaximise}"></c:createCaseWithVideo>
+</aura:component>

@@ -1,0 +1,126 @@
+<!--
+  @description       : 
+  @author            : ChangeMeIn@UserSettingsUnder.SFDoc
+  @group             : 
+  @last modified on  : 11-09-2022
+  @last modified by  : ravi0389@gmail.com
+-->
+<template>
+    <div class="slds-m-around_small slds-form slds-is-relative">
+
+        <template if:true={isLoading}>
+            <div class="slds-spinner_container">
+                <div class="slds-spinner--brand  slds-spinner slds-spinner--medium slds-is-relative" role="alert"
+                    style="left:42%;">
+                    <span class="slds-assistive-text">Loading</span>
+                    <div class="slds-spinner__dot-a"></div>
+                    <div class="slds-spinner__dot-b"></div>
+                    <div style="transform: translate(-32%, -50%) rotate(-90deg);width: 250px;text-align: center;">
+                        <div class="slds-p-top_large">
+                            {status}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <template if:true={isPromptAudio}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_small"
+                aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1">
+                <div class="slds-modal__container" style="min-width:312px;">
+                    <header class="slds-modal__header">
+                        <lightning-button-icon icon-name="utility:close" alternative-text="Close this window"
+                            size="large" variant="bare-inverse" onclick={cancel} class="slds-modal__close">
+                        </lightning-button-icon>
+                        <h2 id="modal-heading-01" class="slds-modal__title slds-hyphenate">Record Your Screen</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                        <div class="slds-text-align_center"> Please Select the below option to Continue </div>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button-group >
+                            <lightning-button icon-name="utility:unmuted" onclick={recordWithAudio} variant="brand"
+                            label="With Audio"></lightning-button>
+
+                            <lightning-button icon-name="utility:muted" onclick={recordWithOutAudio} variant="destructive"
+                                label="Without Audio"></lightning-button> &nbsp;&nbsp;
+                           
+                        </lightning-button-group>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+
+        <div class="slds-form-element slds-form-element_stacked">
+            <div class="slds-form-element__control">
+                <lightning-input name="Subject" placeholder="Subject" label="Subject">
+                </lightning-input>
+            </div>
+        </div>
+        <div class="slds-form-element slds-form-element_stacked">
+            <label class="slds-form-element__label"> Description </label>
+            <div class="slds-form-element__control">
+                <div class="textareacont">
+                    <div class="feedback__btn">
+                        <lightning-icon icon-name="utility:unmuted" size="xx-small" onclick={startSpeaking}
+                            if:false={vfNotLoaded}></lightning-icon>
+                    </div>
+                    <textarea name="Description" placeholder="Description…"
+                        class={descriptionCls}></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="slds-align_absolute-center">
+            <lightning-button-group if:false={videoInProgress}>
+                <lightning-button label="Take Screenshot" icon-name="utility:photo" onclick={startScreenShot}
+                    disabled={vfNotLoaded} variant="brand"></lightning-button>
+                <lightning-button label="Screen Recorder" icon-name="utility:video" disabled={vfNotLoaded}
+                    onclick={startScreenShare} variant="destructive"></lightning-button>
+            </lightning-button-group>
+        </div>
+
+        <div class="slds-m-top_small slds-align_absolute-center">
+            <span if:true={imageAvailable} class="slds-badge slds-theme_alt-inverse" style="cursor:pointer;"
+                onclick={redirectToImage}> Image_Preview
+                <span style="margin-left:5px;border-left:1px white solid;">
+                    <span class="slds-badge__icon slds-badge__icon_right">
+                        <lightning-icon icon-name="utility:close" size="xx-small" variant="inverse"
+                            onclick={removeImage}> </lightning-icon>
+                    </span>
+                </span>
+            </span>
+
+            <span if:true={videoAvailable}> 
+                <span if:true={imageAvailable}> 
+                    <span style="margin-right:15px;"></span>
+                </span> 
+            </span>
+
+            <span if:true={videoAvailable} class="slds-badge slds-theme_alt-inverse" onclick={redirectToVideo}
+                style="cursor:pointer;"> Video_Preview
+                <span style="margin-left:5px;border-left:1px white solid;">
+                    <span class="slds-badge__icon slds-badge__icon_right">
+                        <lightning-icon icon-name="utility:close" size="xx-small" variant="inverse"
+                            onclick={removeVideo}> </lightning-icon>
+                    </span>
+                </span>
+            </span>
+        </div>
+
+        <div class="slds-docked-form-footer">
+            <button if:true={videoInProgress} onclick={stopScreenShare}
+                class="slds-button slds-button_destructive slds-button_stretch">Stop Sharing</button>
+            <button if:false={videoInProgress} onclick={handleSave}
+                class="slds-button slds-button_success slds-button_stretch slds-m-left_small slds-m-right_small">Create
+                Case</button>
+        </div>
+
+    </div>
+
+    <div class="slds-hide">
+        <iframe src="/apex/CreateCaseApiPage" width="320" height="240" allowusermedia="true"
+            allow="display-capture *; microphone *"></iframe>
+    </div>
+</template>

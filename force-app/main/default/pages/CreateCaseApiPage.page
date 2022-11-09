@@ -1,0 +1,287 @@
+<!--
+  @description       : 
+  @author            : ChangeMeIn@UserSettingsUnder.SFDoc
+  @group             : 
+  @last modified on  : 11-09-2022
+  @last modified by  : ChangeMeIn@UserSettingsUnder.SFDoc
+-->
+<apex:page docType="html-5.0" applyHtmlTag="false" applyBodyTag="false" showHeader="false" sidebar="false" standardStylesheets="false">
+
+  <canvas id="fake" style="display:none;"></canvas>
+
+  <script type="text/javascript">__sfdcSessionId = '{!$Api.Session_Id}';</script>
+  <script src="../../soap/ajax/51.0/connection.js" type="text/javascript"></script>
+
+  <script>
+
+
+    window.addEventListener("message", (event) => {
+      if (event.origin.includes('lightning.force.com')) {
+        handleMessage(JSON.parse(event.data));
+      } else {
+        return;
+      }
+    }, false);
+
+    //Inform to LWC about the VF load 
+    postMessageFn({ "type": "VIDEO_AVAILABLE" }, '*');
+
+    function postMessageFn(message) {
+      window.parent.postMessage(JSON.stringify(message), '*');
+    }
+
+
+    let videoData, url, isAudio, isAudioSelected;
+    let mediaRecorder, displayStream, tracks, audiostream, voiceStream;
+
+    const start_recording = 'START_RECORDING';
+    const stop_recording = 'STOP_RECORDING';
+
+    function handleMessage(message) {
+      console.log(message);
+      if (message.type == start_recording) {
+        //   startCapture();
+        isAudioSelected = message.isAudio;
+        recordScreen();
+      }
+
+      if (message.type == stop_recording) {
+        stopRecordingScreen();
+      }
+      if (message.type == 'VIDEO_PREVIEW') {
+        videoPreview();
+      }
+      if (message.type == 'IMAGE_PREVIEW') {
+        imagePreview(message.url);
+      }
+      if (message.type == 'CREATE_FILE') {
+        uploadContentVersion(message.recordId, message.name, message.src,message.operation);
+      }
+      if (message.type == 'START_SCREENSHOT') {
+        takeScreenShot();
+      }
+      if (message.type == 'START_SPEAKING') {
+        runSpeechRecognition();
+      }
+    }
+
+
+    async function recordScreen() {
+
+      const mimeType = 'video/webm';
+      shouldStop = false;
+      const constraints = {
+        video: {
+          cursor: 'motion'
+        }
+      };
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia)) {
+        return window.parent.alert('Screen Record not supported!')
+      }
+      let stream = null;
+      try {
+
+        displayStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "motion" }, audio: { 'echoCancellation': true } });
+
+        if (isAudioSelected) {
+          postMessageFn({ "type": "VIDEO_STARTED" });
+          const audioContext = new AudioContext();
+          isAudio = true;
+          voiceStream = await navigator.mediaDevices.getUserMedia({ audio: { 'echoCancellation': true }, video: false });
+          const userAudio = audioContext.createMediaStreamSource(voiceStream);
+
+          const audioDestination = audioContext.createMediaStreamDestination();
+          userAudio.connect(audioDestination);
+
+          if (displayStream.getAudioTracks().length > 0) {
+            const displayAudio = audioContext.createMediaStreamSource(displayStream);
+            displayAudio.connect(audioDestination);
+          }
+
+          tracks = [...displayStream.getVideoTracks(), ...audioDestination.stream.getTracks()]
+          stream = new MediaStream(tracks);
+          stream.getVideoTracks()[0].onended = function () {
+            stopRecordingScreen();
+          };
+          handleRecord({ stream, mimeType })
+        } else {
+          isAudio = false;
+          postMessageFn({ "type": "VIDEO_STARTED" });
+          stream = displayStream;
+          handleRecord({ stream, mimeType });
+        };
+      }
+      catch (error) {
+        console.log('Updated Error------>>' + error);
+        postMessageFn({ "type": "VIDEO_CANCELLED", "errorStr": error.toString() });
+      }
+    }
+
+    const handleRecord = function ({ stream, mimeType }) {
+
+      let recordedChunks = [];
+      stopped = false;
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = function (e) {
+        if (e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = function (e) {
+        postMessageFn({ "type": "VIDEO_STOPPED" }, '*');
+        displayStream.getTracks()
+          .forEach(track => track.stop())
+        if (isAudio) {
+          voiceStream.getAudioTracks()
+            .forEach(track => track.stop())
+        }
+        const blob = new Blob(recordedChunks, {
+          type: mimeType
+        });
+        // const filename = window.prompt('Enter file name');
+        blobToBase64(blob).then(result => {
+          postMessageFn({ "type": "VIDEO_DATA", "src": result, "fileName": '' }, '*');
+          stop();
+        });
+        recordedChunks = []
+        url = URL.createObjectURL(blob);
+      };
+
+      mediaRecorder.start(200);
+    }
+
+
+    function stopRecordingScreen() {
+      mediaRecorder.stop()
+      mediaRecorder = null
+    }
+
+    function videoPreview() {
+      window.open(url, '_blank');
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, _) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+
+    function uploadContentVersion(recordId, filename, filecontent,operation) {
+
+      postMessageFn({ "type": "FILE_IN_PROGRESS" });
+
+      var contentVersion = new sforce.SObject('ContentVersion');
+      contentVersion.Title = filename;
+      contentVersion.PathOnClient = '/' + filename;
+      contentVersion.FirstPublishLocationId = recordId;
+      contentVersion.VersionData = filecontent;
+
+      var results = sforce.connection.create([contentVersion]);
+
+      for (var i = 0; i < results.length; i++) {
+        if (results[i].getBoolean("success")) {
+          postMessageFn({ "operation":operation,"type": "FILE_CREATED", "fileId": results[i].id })
+        }
+        else {
+          postMessageFn({ "operation":operation,"type": "FILE_FAILED", "error": results[i] })
+        }
+      }
+    }
+
+    const takeScreenShot = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { mediaSource: 'screen' },
+        })
+        postMessageFn({ "type": "SCREENSHOT_BEGINS" });
+        setTimeout(function () {
+          (async () => {
+            // get correct video track
+            const track = stream.getVideoTracks()[0]
+            // init Image Capture and not Video stream
+            const imageCapture = new ImageCapture(track)
+            // take first frame only
+            const bitmap = await imageCapture.grabFrame()
+            // destory video track to prevent more recording / mem leak
+            track.stop()
+
+            const canvas = document.getElementById('fake')
+            canvas.width = bitmap.width
+            canvas.height = bitmap.height
+            const context = canvas.getContext('2d')
+            context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height)
+            const image = canvas.toDataURL()
+
+            const blob = b64toBlob(image.split(',')[1], 'image/png');
+            const blobUrl = URL.createObjectURL(blob);
+            postMessageFn({ "type": "IMAGE_DATA", "src": image.split(',')[1], "url": blobUrl });
+          })();
+        }, 200);
+      }
+      catch (error) {
+        console.log('<<-------Error------>>' + error);
+        postMessageFn({ "type": "VIDEO_CANCELLED", "errorStr": error.toString() });
+      }
+    }
+
+    function imagePreview(url) {
+      window.open(url, '_blank');
+    }
+
+    const b64toBlob = (b64Data, contentType = '', sliceSize = 512) => {
+      const byteCharacters = atob(b64Data);
+      const byteArrays = [];
+
+      for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+
+      const blob = new Blob(byteArrays, { type: contentType });
+      return blob;
+    }
+
+    function runSpeechRecognition() {
+
+      try {
+        // new speech recognition object
+        var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+        var recognition = new SpeechRecognition();
+
+        // This runs when the speech recognition service starts
+        recognition.onstart = function () {
+          postMessageFn({ "type": "AUDIO_TEXT_STARTED" });
+        };
+
+        recognition.onspeechend = function () {
+          postMessageFn({ "type": "AUDIO_TEXT_STOPPED" });
+          recognition.stop();
+        }
+
+        recognition.onresult = function (event) {
+          var transcript = event.results[0][0].transcript;
+          var confidence = event.results[0][0].confidence;
+          postMessageFn({ "type": "AUDIO_TEXT_RECEIVED", "msg": transcript });
+        };
+
+        // start recognition
+        recognition.start();
+      }
+      catch (error) {
+        postMessageFn({ "type": "VIDEO_CANCELLED", "errorStr": error.toString() });
+      }
+    }
+
+  </script>
+</apex:page>

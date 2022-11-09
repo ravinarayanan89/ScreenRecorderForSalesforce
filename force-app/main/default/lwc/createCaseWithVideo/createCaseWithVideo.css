@@ -1,0 +1,22 @@
+.full-view{
+    height:229px;
+    width:308px;
+}
+.video-available{
+    height:205px;
+    width:308px;
+}
+.textareacont{
+    position: relative;
+    width:auto;
+    height:auto;
+    display: inline-block;
+    padding:0;
+}
+.feedback__btn{
+    position:absolute;
+    bottom:8px;
+    right:15px;
+    padding:4px;
+    cursor:pointer;
+}
