@@ -1,18 +1,17 @@
-# Salesforce DX Project: Next Steps
+# Screen Recorder for Salesforce
 
-Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
+This code is a component for Salesforce to create a case in Salesforce. A case is like a todo item and has these properties
 
-## How Do You Plan to Deploy Your Changes?
+ - Subject 
+ - Description 
+ - Media
+   -  Screen
+   -  Video 
 
-Do you want to deploy a set of changes, or create a self-contained application? Choose a [development model](https://developer.salesforce.com/tools/vscode/en/user-guide/development-models).
+To record the vidoe the component uses the [MediaStream Recording API](https://developer.mozilla.org/en-US/docs/Web/API/MediaStream_Recording_API/Using_the_MediaStream_Recording_API)  (see WC3 Draft [Media Capture and Strems](https://w3c.github.io/mediacapture-main/#sotd))
 
-## Configure Your Salesforce DX Project
+For more information see this [vidoe demo of the case component](https://www.youtube.com/watch?v=nilKdf1YTjE)
 
-The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
+The license is ....
 
-## Read All About It
-
-- [Salesforce Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-- [Salesforce CLI Setup Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_intro.htm)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
+Feel free to contribute or raise an issue 
